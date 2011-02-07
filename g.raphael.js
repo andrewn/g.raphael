@@ -4,6 +4,11 @@
  * Copyright (c) 2009 Dmitry Baranovskiy (http://g.raphaeljs.com)
  * Licensed under the MIT (http://www.opensource.org/licenses/mit-license.php) license.
  */
+
+/*
+ * 2011-01-17 (AndrewN): Copied g.line.js into file as was giving script errors 
+ *                        due to load order.
+*/
  
  
 (function () {
@@ -379,7 +384,8 @@
         f = round((from - (i > 0 ? 0 : .5)) * Math.pow(10, i)) / Math.pow(10, i);
         return {from: f, to: t, power: i};
     };
-    Raphael.fn.g.axis = function (x, y, length, from, to, steps, orientation, labels, type, dashsize) {
+    Raphael.fn.g.axis = function (x, y, length, from, to, steps, orientation, labels, type, dashsize, grid) {
+        grid = grid != null ? grid : false;
         dashsize = dashsize == null ? 2 : dashsize;
         type = type || "t";
         steps = steps || 10;
@@ -389,6 +395,7 @@
             t = ends.to,
             i = ends.power,
             j = 0,
+            gridpath = [],
             text = this.set();
         d = (t - f) / steps;
         var label = f,
@@ -400,6 +407,12 @@
             while (Y >= y - length) {
                 type != "-" && type != " " && (path = path.concat(["M", x - (type == "+" || type == "|" ? dashsize : !(orientation - 1) * dashsize * 2), Y + .5, "l", dashsize * 2 + 1, 0]));
                 text.push(this.text(x + addon, Y, (labels && labels[j++]) || (Math.round(label) == label ? label : +label.toFixed(rnd))).attr(this.g.txtattr).attr({"text-anchor": orientation - 1 ? "start" : "end"}));
+                
+                if ( grid ) {
+                    gridpath = gridpath.concat(
+                         ["M", x - (type == "+" || type == "|" ? dashsize : !(orientation - 1) * dashsize * 2), Y + .5, "l", y - dashsize * 2 + 1, 0]
+                    );
+                }
                 label += d;
                 Y -= dx;
             }
@@ -418,6 +431,13 @@
             while (X <= x + length) {
                 type != "-" && type != " " && (path = path.concat(["M", X + .5, y - (type == "+" ? dashsize : !!orientation * dashsize * 2), "l", 0, dashsize * 2 + 1]));
                 text.push(txt = this.text(X, y + addon, (labels && labels[j++]) || (Math.round(label) == label ? label : +label.toFixed(rnd))).attr(this.g.txtattr));
+
+                if ( grid ) {
+                    gridpath = gridpath.concat(
+                         ["M", X + .5, y - (type == "+" ? dashsize : !!orientation * dashsize * 2), "l", 0, to - y ]
+                    );
+                }
+
                 var bb = txt.getBBox();
                 if (prev >= bb.x - 5) {
                     text.pop(text.length - 1).remove();
@@ -432,8 +452,12 @@
                 text.push(this.text(x + length, y + addon, (labels && labels[j]) || (Math.round(label) == label ? label : +label.toFixed(rnd))).attr(this.g.txtattr));
             }
         }
+
+        var grid = this.path( gridpath ).toBack();
+
         var res = this.path(path);
         res.text = text;
+        res.grid = grid;
         res.all = this.set([res, text]);
         res.remove = function () {
             this.text.remove();
